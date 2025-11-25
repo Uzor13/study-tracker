@@ -1,28 +1,93 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { DocumentCard } from '@/components/visa/DocumentCard'
-import { useStore } from '@/store/useStore'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Button } from '@/components/ui/button'
 import { DEFAULT_VISA_DOCUMENTS } from '@/data/constants'
 import { AlertCircle } from 'lucide-react'
 
+interface Document {
+  id: string
+  name: string
+  description: string | null
+  status: string
+  required: boolean
+  category: string
+  fileUrl: string | null
+  uploadedDate: Date | null
+  expiryDate: Date | null
+  notes: string | null
+}
+
 export default function VisaPage() {
-  const visaDocuments = useStore((state) => state.visaDocuments)
-  const addVisaDocument = useStore((state) => state.addVisaDocument)
+  const [visaDocuments, setVisaDocuments] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isInitializing, setIsInitializing] = useState(false)
 
   useEffect(() => {
-    if (visaDocuments.length === 0) {
-      DEFAULT_VISA_DOCUMENTS.forEach((doc) => {
-        addVisaDocument({
-          ...doc,
-          id: Date.now().toString() + Math.random().toString(),
-        })
-      })
-    }
+    fetchDocuments()
   }, [])
+
+  const fetchDocuments = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/documents')
+      if (response.ok) {
+        const data = await response.json()
+
+        // If no documents exist and not currently initializing, create default ones
+        if (data.documents.length === 0 && !isInitializing) {
+          await initializeDefaultDocuments()
+        } else {
+          setVisaDocuments(data.documents)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const initializeDefaultDocuments = async () => {
+    if (isInitializing) return // Prevent duplicate initialization
+
+    try {
+      setIsInitializing(true)
+      const createdDocs = []
+
+      // Create all default documents
+      for (const doc of DEFAULT_VISA_DOCUMENTS) {
+        const response = await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: doc.name,
+            description: doc.description,
+            category: 'identity', // default category
+            required: doc.required,
+          }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          createdDocs.push(data.document)
+        }
+      }
+
+      // Set documents directly instead of refetching
+      setVisaDocuments(createdDocs)
+    } catch (error) {
+      console.error('Error initializing documents:', error)
+    } finally {
+      setIsInitializing(false)
+    }
+  }
+
+  const handleUpdate = () => {
+    fetchDocuments() // Reload after update
+  }
 
   const stats = {
     total: visaDocuments.length,
@@ -41,11 +106,23 @@ export default function VisaPage() {
     d => d.required && d.status === 'not_started'
   )
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading documents...</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Visa Documents</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Visa Documents</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Track your study permit application documents
         </p>
       </div>
@@ -119,7 +196,7 @@ export default function VisaPage() {
           {visaDocuments
             .filter(d => d.required)
             .map((doc) => (
-              <DocumentCard key={doc.id} document={doc} />
+              <DocumentCard key={doc.id} document={doc} onUpdate={handleUpdate} />
             ))}
         </div>
       </div>
@@ -131,7 +208,7 @@ export default function VisaPage() {
             {visaDocuments
               .filter(d => !d.required)
               .map((doc) => (
-                <DocumentCard key={doc.id} document={doc} />
+                <DocumentCard key={doc.id} document={doc} onUpdate={handleUpdate} />
               ))}
           </div>
         </div>

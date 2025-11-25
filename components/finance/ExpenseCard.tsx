@@ -1,11 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar, Trash2, DollarSign } from 'lucide-react'
-import { useStore } from '@/store/useStore'
 import type { FinanceItem } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
@@ -21,17 +21,63 @@ const categoryLabels = {
 
 interface ExpenseCardProps {
   expense: FinanceItem
+  onUpdate: () => void
+  onDelete: () => void
 }
 
-export function ExpenseCard({ expense }: ExpenseCardProps) {
-  const updateFinanceItem = useStore((state) => state.updateFinanceItem)
-  const deleteFinanceItem = useStore((state) => state.deleteFinanceItem)
+export function ExpenseCard({ expense, onUpdate, onDelete }: ExpenseCardProps) {
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const togglePaid = () => {
-    updateFinanceItem(expense.id, {
-      paid: !expense.paid,
-      paidDate: !expense.paid ? new Date().toISOString() : undefined,
-    })
+  const togglePaid = async () => {
+    setIsUpdating(true)
+    const newPaidStatus = !expense.paid
+
+    try {
+      const response = await fetch('/api/finances', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: expense.id,
+          paid: newPaidStatus,
+          paidDate: newPaidStatus ? new Date().toISOString() : null,
+        }),
+      })
+
+      if (response.ok) {
+        onUpdate() // Notify parent to refresh
+      } else {
+        console.error('Failed to update expense')
+      }
+    } catch (error) {
+      console.error('Error updating expense:', error)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this expense?')) {
+      return
+    }
+
+    setIsDeleting(true)
+
+    try {
+      const response = await fetch(`/api/finances?id=${expense.id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        onDelete() // Notify parent to refresh
+      } else {
+        console.error('Failed to delete expense')
+      }
+    } catch (error) {
+      console.error('Error deleting expense:', error)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -42,6 +88,7 @@ export function ExpenseCard({ expense }: ExpenseCardProps) {
             <Checkbox
               checked={expense.paid}
               onCheckedChange={togglePaid}
+              disabled={isUpdating}
               className="mt-1"
             />
             <div className="flex-1 space-y-2">
@@ -77,7 +124,8 @@ export function ExpenseCard({ expense }: ExpenseCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => deleteFinanceItem(expense.id)}
+            onClick={handleDelete}
+            disabled={isDeleting}
             className="text-destructive"
           >
             <Trash2 className="h-4 w-4" />

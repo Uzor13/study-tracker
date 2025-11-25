@@ -1,6 +1,7 @@
+
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({})
 
 async function main() {
   console.log('🌱 Seeding database...')
@@ -60,14 +61,18 @@ async function main() {
 
   console.log('✅ Created visa categories')
 
-  // Create document templates for Study Permit
+  // Create document templates for Study Permit (degree-specific)
   const studyPermitDocs = [
+    // Common documents for all degree types
     {
       name: 'Letter of Acceptance (LOA)',
       description: 'Official letter from a Designated Learning Institution (DLI)',
       required: true,
       category: 'educational',
       order: 1,
+      forUndergrad: true,
+      forMasters: true,
+      forPhd: true,
     },
     {
       name: 'Proof of Identity (Passport)',
@@ -75,6 +80,9 @@ async function main() {
       required: true,
       category: 'identity',
       order: 2,
+      forUndergrad: true,
+      forMasters: true,
+      forPhd: true,
     },
     {
       name: 'Proof of Financial Support',
@@ -82,6 +90,9 @@ async function main() {
       required: true,
       category: 'financial',
       order: 3,
+      forUndergrad: true,
+      forMasters: true,
+      forPhd: true,
     },
     {
       name: 'Biometrics',
@@ -89,6 +100,9 @@ async function main() {
       required: true,
       category: 'identity',
       order: 4,
+      forUndergrad: true,
+      forMasters: true,
+      forPhd: true,
     },
     {
       name: 'Medical Exam',
@@ -96,13 +110,19 @@ async function main() {
       required: true,
       category: 'medical',
       order: 5,
+      forUndergrad: true,
+      forMasters: true,
+      forPhd: true,
     },
     {
       name: 'Statement of Purpose (SOP)',
-      description: 'Letter explaining your study plans and intentions',
+      description: 'Letter explaining your study plans and career goals',
       required: true,
       category: 'educational',
       order: 6,
+      forUndergrad: true,
+      forMasters: true,
+      forPhd: true,
     },
     {
       name: 'Language Test Results',
@@ -110,6 +130,9 @@ async function main() {
       required: true,
       category: 'educational',
       order: 7,
+      forUndergrad: true,
+      forMasters: true,
+      forPhd: true,
     },
     {
       name: 'Police Certificate',
@@ -117,15 +140,172 @@ async function main() {
       required: false,
       category: 'identity',
       order: 8,
+      forUndergrad: true,
+      forMasters: true,
+      forPhd: true,
     },
+
+    // Undergraduate-specific documents
     {
-      name: 'Academic Documents',
-      description: 'Transcripts, diplomas, degrees',
+      name: 'High School Transcripts',
+      description: 'Official transcripts from secondary school',
       required: true,
       category: 'educational',
       order: 9,
+      forUndergrad: true,
+      forMasters: false,
+      forPhd: false,
+    },
+    {
+      name: 'High School Diploma',
+      description: 'Secondary school completion certificate',
+      required: true,
+      category: 'educational',
+      order: 10,
+      forUndergrad: true,
+      forMasters: false,
+      forPhd: false,
+    },
+    {
+      name: 'SAT/ACT Scores (if applicable)',
+      description: 'Standardized test scores for US-style admissions',
+      required: false,
+      category: 'educational',
+      order: 11,
+      forUndergrad: true,
+      forMasters: false,
+      forPhd: false,
+    },
+
+    // Masters-specific documents
+    {
+      name: 'Bachelor\'s Degree Certificate',
+      description: 'Proof of completed undergraduate degree',
+      required: true,
+      category: 'educational',
+      order: 9,
+      forUndergrad: false,
+      forMasters: true,
+      forPhd: true,
+    },
+    {
+      name: 'University Transcripts',
+      description: 'Official transcripts from undergraduate studies',
+      required: true,
+      category: 'educational',
+      order: 10,
+      forUndergrad: false,
+      forMasters: true,
+      forPhd: true,
+    },
+    {
+      name: 'Letters of Recommendation',
+      description: '2-3 academic reference letters from professors',
+      required: true,
+      category: 'educational',
+      order: 11,
+      forUndergrad: false,
+      forMasters: true,
+      forPhd: true,
+    },
+    {
+      name: 'Resume/CV',
+      description: 'Academic and professional curriculum vitae',
+      required: true,
+      category: 'educational',
+      order: 12,
+      forUndergrad: false,
+      forMasters: true,
+      forPhd: true,
+    },
+    {
+      name: 'GRE/GMAT Scores (if required)',
+      description: 'Graduate school entrance exam scores',
+      required: false,
+      category: 'educational',
+      order: 13,
+      forUndergrad: false,
+      forMasters: true,
+      forPhd: false,
+    },
+    {
+      name: 'Work Experience Letters',
+      description: 'Professional experience documentation (if applicable)',
+      required: false,
+      category: 'employment',
+      order: 14,
+      forUndergrad: false,
+      forMasters: true,
+      forPhd: false,
+    },
+
+    // PhD-specific documents
+    {
+      name: 'Master\'s Degree Certificate',
+      description: 'Proof of completed graduate degree',
+      required: true,
+      category: 'educational',
+      order: 15,
+      forUndergrad: false,
+      forMasters: false,
+      forPhd: true,
+    },
+    {
+      name: 'Master\'s Thesis',
+      description: 'Copy of completed master\'s thesis or major research paper',
+      required: true,
+      category: 'educational',
+      order: 16,
+      forUndergrad: false,
+      forMasters: false,
+      forPhd: true,
+    },
+    {
+      name: 'Research Proposal',
+      description: 'Detailed proposal for doctoral research',
+      required: true,
+      category: 'educational',
+      order: 17,
+      forUndergrad: false,
+      forMasters: false,
+      forPhd: true,
+    },
+    {
+      name: 'Publications List',
+      description: 'List of academic publications (if any)',
+      required: false,
+      category: 'educational',
+      order: 18,
+      forUndergrad: false,
+      forMasters: false,
+      forPhd: true,
+    },
+    {
+      name: 'Supervisor Acceptance Letter',
+      description: 'Letter from potential PhD supervisor confirming acceptance',
+      required: true,
+      category: 'educational',
+      order: 19,
+      forUndergrad: false,
+      forMasters: false,
+      forPhd: true,
+    },
+    {
+      name: 'Writing Sample',
+      description: 'Academic writing sample demonstrating research ability',
+      required: true,
+      category: 'educational',
+      order: 20,
+      forUndergrad: false,
+      forMasters: false,
+      forPhd: true,
     },
   ]
+
+  // Clear existing document templates to avoid duplicates
+  await prisma.documentTemplate.deleteMany({
+    where: { visaCategoryId: studyPermit.id }
+  })
 
   for (const doc of studyPermitDocs) {
     await prisma.documentTemplate.create({
