@@ -1,12 +1,76 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { AddSchoolDialog } from '@/components/applications/AddSchoolDialog'
 import { SchoolCard } from '@/components/applications/SchoolCard'
-import { useStore } from '@/store/useStore'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import type { School, ApplicationStatus } from '@/types'
+
+interface Application {
+  id: string
+  institutionName: string
+  program: string
+  level: string
+  city: string
+  province: string
+  status: string
+  applicationFee: number
+  tuitionFee: number
+  applicationDeadline: Date | null
+  appliedDate: Date | null
+  decisionDate: Date | null
+  notes: string | null
+}
 
 export default function ApplicationsPage() {
-  const schools = useStore((state) => state.schools)
+  const [applications, setApplications] = useState<Application[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetchApplications()
+  }, [])
+
+  const fetchApplications = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/applications')
+      if (response.ok) {
+        const data = await response.json()
+        setApplications(data.applications)
+      }
+    } catch (error) {
+      console.error('Error fetching applications:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleUpdate = () => {
+    fetchApplications() // Reload after update
+  }
+
+  const handleDelete = () => {
+    fetchApplications() // Reload after delete
+  }
+
+  // Convert applications to school format for compatibility
+  const schools = applications.map(app => ({
+    id: app.id,
+    name: app.institutionName,
+    program: app.program,
+    level: app.level as School['level'],
+    location: {
+      city: app.city,
+      province: app.province,
+    },
+    status: app.status as ApplicationStatus,
+    applicationFee: app.applicationFee,
+    tuitionFee: app.tuitionFee,
+    applicationDeadline: app.applicationDeadline ? new Date(app.applicationDeadline).toISOString() : '',
+    appliedDate: app.appliedDate ? new Date(app.appliedDate).toISOString() : undefined,
+    decisionDate: app.decisionDate ? new Date(app.decisionDate).toISOString() : undefined,
+    notes: app.notes || undefined,
+  }))
 
   const stats = {
     total: schools.length,
@@ -20,14 +84,14 @@ export default function ApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">School Applications</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">School Applications</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Track all your Canadian university applications
           </p>
         </div>
-        <AddSchoolDialog />
+        <AddSchoolDialog onApplicationAdded={handleUpdate} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -65,19 +129,30 @@ export default function ApplicationsPage() {
         </Card>
       </div>
 
-      {schools.length === 0 ? (
+      {isLoading ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading applications...</CardTitle>
+          </CardHeader>
+        </Card>
+      ) : schools.length === 0 ? (
         <Card className="border-dashed">
           <CardHeader>
             <CardTitle>No Applications Yet</CardTitle>
             <CardDescription>
-              Start by adding your first school application to track your progress
+              Start by adding your first school application to track your progress or add schools from the Browse Schools page
             </CardDescription>
           </CardHeader>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {schools.map((school) => (
-            <SchoolCard key={school.id} school={school} />
+            <SchoolCard
+              key={school.id}
+              school={school}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}

@@ -8,7 +8,11 @@ import { Plus } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import type { School, ApplicationStatus } from '@/types'
 
-export function AddSchoolDialog() {
+interface AddSchoolDialogProps {
+  onApplicationAdded?: () => void
+}
+
+export function AddSchoolDialog({ onApplicationAdded }: AddSchoolDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
   const addSchool = useStore((state) => state.addSchool)
 
@@ -42,6 +46,7 @@ export function AddSchoolDialog() {
     }
 
     addSchool(newSchool)
+    onApplicationAdded?.()
     setIsOpen(false)
     setFormData({
       name: '',

@@ -13,7 +13,7 @@ export function formatCurrency(amount: number, currency: string = "CAD"): string
 }
 
 export function formatDate(date: Date | string): string {
-  return new Intl.DateFormat("en-CA", {
+  return new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
     month: "long",
     day: "numeric",

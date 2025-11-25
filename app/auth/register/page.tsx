@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [degreeType, setDegreeType] = useState<string>('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -23,6 +24,11 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
     setSuccess(false)
+
+    if (!degreeType) {
+      setError('Please select your degree type')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -42,7 +48,7 @@ export default function RegisterPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name, degreeType }),
       })
 
       const data = await response.json()
@@ -129,6 +135,25 @@ export default function RegisterPage() {
                 disabled={isLoading}
                 className="h-11"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="degreeType">Degree Type</Label>
+              <select
+                id="degreeType"
+                value={degreeType}
+                onChange={(e) => setDegreeType(e.target.value)}
+                required
+                disabled={isLoading}
+                className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Select your degree type</option>
+                <option value="undergrad">Undergraduate</option>
+                <option value="masters">Masters</option>
+                <option value="phd">PhD</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                This helps us customize your document requirements
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

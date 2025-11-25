@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,10 +12,26 @@ import { LogIn, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/'
+  const verified = searchParams.get('verified')
+  const verificationError = searchParams.get('error')
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(verified === 'true' ? 'Email verified successfully! You can now log in.' : '')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Handle verification errors
+  if (verificationError && !error) {
+    const errorMessages: Record<string, string> = {
+      invalid_token: 'Invalid verification link',
+      expired_token: 'Verification link has expired',
+      verification_failed: 'Email verification failed. Please try again.',
+    }
+    setError(errorMessages[verificationError] || 'Verification failed')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,7 +48,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Invalid email or password')
       } else {
-        router.push('/')
+        router.push(callbackUrl)
         router.refresh()
       }
     } catch (error) {
@@ -60,6 +76,11 @@ export default function LoginPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                {success}
+              </div>
+            )}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {error}

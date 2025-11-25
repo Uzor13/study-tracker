@@ -5,12 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Plus } from 'lucide-react'
-import { useStore } from '@/store/useStore'
 import type { FinanceItem } from '@/types'
 
-export function AddExpenseDialog() {
+interface AddExpenseDialogProps {
+  onExpenseAdded: () => void
+}
+
+export function AddExpenseDialog({ onExpenseAdded }: AddExpenseDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const addFinanceItem = useStore((state) => state.addFinanceItem)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
     category: 'other' as FinanceItem['category'],
@@ -20,28 +23,41 @@ export function AddExpenseDialog() {
     dueDate: '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
 
-    const newItem: FinanceItem = {
-      id: Date.now().toString(),
-      category: formData.category,
-      description: formData.description,
-      amount: parseFloat(formData.amount),
-      currency: formData.currency,
-      paid: false,
-      dueDate: formData.dueDate || undefined,
+    try {
+      const response = await fetch('/api/finances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: formData.category,
+          description: formData.description,
+          amount: parseFloat(formData.amount),
+          currency: formData.currency,
+          dueDate: formData.dueDate || undefined,
+        }),
+      })
+
+      if (response.ok) {
+        setIsOpen(false)
+        setFormData({
+          category: 'other',
+          description: '',
+          amount: '',
+          currency: 'CAD',
+          dueDate: '',
+        })
+        onExpenseAdded() // Notify parent to refresh
+      } else {
+        console.error('Failed to add expense')
+      }
+    } catch (error) {
+      console.error('Error adding expense:', error)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    addFinanceItem(newItem)
-    setIsOpen(false)
-    setFormData({
-      category: 'other',
-      description: '',
-      amount: '',
-      currency: 'CAD',
-      dueDate: '',
-    })
   }
 
   if (!isOpen) {
@@ -131,10 +147,12 @@ export function AddExpenseDialog() {
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit">Add Expense</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Adding...' : 'Add Expense'}
+            </Button>
           </div>
         </form>
       </div>

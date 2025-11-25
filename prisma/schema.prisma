@@ -18,13 +18,25 @@ model User {
   password      String
   emailVerified DateTime?
   image         String?
+  degreeType    String? // undergrad, masters, phd
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // Email verification
+  emailVerificationToken String?   @unique
+  emailTokenExpiry       DateTime?
 
   // User preferences
   notificationsEnabled Boolean @default(true)
   emailNotifications   Boolean @default(true)
   reminderDays         Int     @default(7) // Days before deadline to send reminder
+  defaultCurrency      String  @default("CAD") // Default currency for expenses
+
+  // School-related information
+  programOfStudy   String? // The specific program/course they're applying for
+  institutionName  String? // Target institution
+  intakeYear       Int? // Year of intended intake
+  intakeTerm       String? // Fall, Winter, Summer
 
   // Relations
   applications Application[]
@@ -94,6 +106,42 @@ model VisaProfile {
   @@map("visa_profiles")
 }
 
+// Canadian Schools Database
+model CanadianSchool {
+  id            String   @id @default(cuid())
+  name          String
+  type          String // university, college, polytechnic
+  province      String
+  city          String
+  website       String?
+  ranking       Int? // QS World Ranking or similar
+  established   Int? // Year established
+  international Boolean  @default(true) // Accepts international students
+
+  // Programs offered
+  undergraduate Boolean  @default(false)
+  masters       Boolean  @default(false)
+  phd           Boolean  @default(false)
+
+  // Estimated costs (in CAD)
+  tuitionUndergrad Float?
+  tuitionMasters   Float?
+  tuitionPhd       Float?
+  applicationFee   Float?
+
+  // Additional info
+  description      String?
+  logo             String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([type])
+  @@index([province])
+  @@index([ranking])
+  @@map("canadian_schools")
+}
+
 // School/Institution Applications (for study permits)
 model Application {
   id                 String    @id @default(cuid())
@@ -131,6 +179,12 @@ model DocumentTemplate {
   required       Boolean  @default(true)
   category       String // identity, financial, educational, medical, etc.
   order          Int      @default(0)
+
+  // Degree type specific (null means applies to all)
+  forUndergrad   Boolean? // null = applies to all, true = only undergrad, false = not undergrad
+  forMasters     Boolean?
+  forPhd         Boolean?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -151,6 +205,9 @@ model Document {
   required      Boolean   @default(true)
   category      String // identity, financial, educational, medical, etc.
   fileUrl       String?
+  fileName      String?
+  fileSize      Int? // in bytes
+  fileType      String? // mime type
   uploadedDate  DateTime?
   expiryDate    DateTime?
   notes         String?
@@ -206,6 +263,19 @@ model Timeline {
   visaProfile VisaProfile @relation(fields: [visaProfileId], references: [id], onDelete: Cascade)
 
   @@map("timelines")
+}
+
+// Currency Exchange Rates (cached)
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  from      String // NGN, USD, CAD
+  to        String // NGN, USD, CAD
+  rate      Float
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([from, to])
+  @@map("exchange_rates")
 }
 
 // Email Notifications Queue
