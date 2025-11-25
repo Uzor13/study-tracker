@@ -1,0 +1,230 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User and Authentication
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // User preferences
+  notificationsEnabled Boolean @default(true)
+  emailNotifications   Boolean @default(true)
+  reminderDays         Int     @default(7) // Days before deadline to send reminder
+
+  // Relations
+  applications Application[]
+  visaProfiles VisaProfile[]
+  documents    Document[]
+  finances     Finance[]
+  timelines    Timeline[]
+  sessions     Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  accessToken  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// Visa Category - Extensible for different visa types
+model VisaCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "Study Permit", "Work Permit", "PR", "Tourist Visa"
+  slug        String   @unique // e.g., "study-permit", "work-permit"
+  description String
+  country     String   @default("Canada")
+  icon        String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  visaProfiles      VisaProfile[]
+  documentTemplates DocumentTemplate[]
+
+  @@map("visa_categories")
+}
+
+// User's Visa Application Profile
+model VisaProfile {
+  id             String   @id @default(cuid())
+  userId         String
+  visaCategoryId String
+  status         String   @default("not_started") // not_started, in_progress, submitted, approved, rejected
+  startDate      DateTime @default(now())
+  targetDate     DateTime? // When they plan to travel/start
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visaCategory VisaCategory @relation(fields: [visaCategoryId], references: [id])
+  applications Application[]
+  documents    Document[]
+  finances     Finance[]
+  timelines    Timeline[]
+
+  @@unique([userId, visaCategoryId])
+  @@map("visa_profiles")
+}
+
+// School/Institution Applications (for study permits)
+model Application {
+  id                 String    @id @default(cuid())
+  userId             String
+  visaProfileId      String
+  institutionName    String
+  program            String
+  level              String // undergraduate, postgraduate, masters, phd
+  city               String
+  province           String
+  country            String    @default("Canada")
+  status             String    @default("not_started") // not_started, in_progress, submitted, accepted, rejected, waitlisted
+  applicationFee     Float     @default(0)
+  tuitionFee         Float     @default(0)
+  applicationDeadline DateTime?
+  appliedDate        DateTime?
+  decisionDate       DateTime?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visaProfile VisaProfile @relation(fields: [visaProfileId], references: [id], onDelete: Cascade)
+
+  @@map("applications")
+}
+
+// Document Template (pre-defined for each visa category)
+model DocumentTemplate {
+  id             String   @id @default(cuid())
+  visaCategoryId String
+  name           String
+  description    String
+  required       Boolean  @default(true)
+  category       String // identity, financial, educational, medical, etc.
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  visaCategory VisaCategory @relation(fields: [visaCategoryId], references: [id])
+
+  @@map("document_templates")
+}
+
+// User's Documents
+model Document {
+  id            String    @id @default(cuid())
+  userId        String
+  visaProfileId String
+  name          String
+  description   String?
+  status        String    @default("not_started") // not_started, in_progress, submitted, approved, rejected
+  required      Boolean   @default(true)
+  category      String // identity, financial, educational, medical, etc.
+  fileUrl       String?
+  uploadedDate  DateTime?
+  expiryDate    DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visaProfile VisaProfile @relation(fields: [visaProfileId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+// Financial Tracking
+model Finance {
+  id            String    @id @default(cuid())
+  userId        String
+  visaProfileId String
+  category      String // application_fee, visa_fee, tuition, living_expenses, travel, insurance, other
+  description   String
+  amount        Float
+  currency      String    @default("CAD")
+  paid          Boolean   @default(false)
+  dueDate       DateTime?
+  paidDate      DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visaProfile VisaProfile @relation(fields: [visaProfileId], references: [id], onDelete: Cascade)
+
+  @@map("finances")
+}
+
+// Timeline Events
+model Timeline {
+  id            String    @id @default(cuid())
+  userId        String
+  visaProfileId String
+  title         String
+  description   String?
+  date          DateTime
+  type          String // application, visa, finance, travel, milestone
+  status        String    @default("upcoming") // upcoming, completed, overdue
+  completed     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visaProfile VisaProfile @relation(fields: [visaProfileId], references: [id], onDelete: Cascade)
+
+  @@map("timelines")
+}
+
+// Email Notifications Queue
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String
+  email       String
+  subject     String
+  type        String // reminder, deadline, approval, rejection, welcome
+  content     String
+  sent        Boolean   @default(false)
+  sentAt      DateTime?
+  scheduledFor DateTime
+  error       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([sent])
+  @@index([scheduledFor])
+  @@map("notifications")
+}
