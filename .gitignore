@@ -44,3 +44,6 @@ next-env.d.ts
 
 # uploads (user-uploaded files)
 /public/uploads
+
+# IDE
+.idea/
